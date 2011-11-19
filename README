@@ -1,0 +1,1 @@
+A spring app that polls an rss feed, transforms it, and posts a tweet to twitter.

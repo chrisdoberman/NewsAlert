@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:int-feed="http://www.springframework.org/schema/integration/feed"
+	xmlns:int="http://www.springframework.org/schema/integration"
+	xmlns:int-twitter="http://www.springframework.org/schema/integration/twitter"
+	xsi:schemaLocation="http://www.springframework.org/schema/integration/feed http://www.springframework.org/schema/integration/feed/spring-integration-feed-2.0.xsd
+		http://www.springframework.org/schema/integration http://www.springframework.org/schema/integration/spring-integration-2.0.xsd
+		http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-3.0.xsd
+		http://www.springframework.org/schema/integration/twitter http://www.springframework.org/schema/integration/twitter/spring-integration-twitter-2.0.xsd
+		http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-3.0.xsd">
+
+	<context:component-scan base-package="com.news.internal" />
+	<context:property-placeholder location="classpath:project.properties" />
+
+	<int-feed:inbound-channel-adapter id="feedAdapter"
+		url="${rss.feed.url}" channel="feedChannel" auto-startup="true">
+		<int:poller fixed-rate="60000" max-messages-per-poll="100" />
+	</int-feed:inbound-channel-adapter>
+
+	<int:channel id="feedChannel">
+		<int:queue capacity="100" />
+	</int:channel>
+
+	<bean id="twitterTemplate"
+		class="org.springframework.integration.twitter.core.Twitter4jTemplate">
+		<constructor-arg value="${twitter.oauth.consumerKey}" />
+		<constructor-arg value="${twitter.oauth.consumerSecret}" />
+		<constructor-arg value="${twitter.oauth.accessToken}" />
+		<constructor-arg value="${twitter.oauth.accessTokenSecret}" />
+	</bean>
+
+	<int:channel id="twitterChannel" />
+
+	<int-twitter:outbound-channel-adapter twitter-template="twitterTemplate" channel="twitterChannel" />
+
+	<int:transformer id="transformer" ref="transformerBean"
+		input-channel="feedChannel" method="transform" output-channel="twitterChannel">
+		<int:poller fixed-rate="10000" />
+	</int:transformer>
+
+	<bean id="transformerBean" class="com.news.internal.MessageTransformer" />
+</beans>
